@@ -28,7 +28,15 @@ The project will evolve from a minimal tool-calling research agent into a person
 
 - [Architecture](docs/architecture.md)
 - [Learning & Evolution Roadmap](docs/learning-roadmap.md)
+- [Learning Notes](docs/learning/README.md)
+- [Phase 0 — Understanding the Agent Loop](docs/learning/phase-0-agent-loop.md)
 
 ## Current status
 
-Architecture and learning plan only. Implementation has not started yet.
+**Phase 0 — Understanding the Agent Loop: complete.**
+
+The raw implementation covers tool schemas, tool selection, tool dispatch, multiple tool calls, result propagation, recoverable error observations, bounded execution, and explicit message state without relying on an agent framework.
+
+The Phase 0 implementation is preserved as a learning reference at [`agent/examples/phase0_agent_loop.py`](agent/examples/phase0_agent_loop.py).
+
+The next milestone is **Phase 1 — Building a Research Agent**, beginning with replacing the mock VNDB tool with the real VNDB Kana API.

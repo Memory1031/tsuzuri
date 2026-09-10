@@ -1,3 +1,17 @@
+"""
+Phase 0 reference implementation.
+
+A minimal raw agent loop demonstrating:
+- tool schemas
+- tool dispatch
+- multiple tool calls
+- tool result propagation
+- error handling
+- bounded execution
+
+All external tools use mock data.
+"""
+
 import json
 import os
 
@@ -89,13 +103,11 @@ for step in range(MAX_STEPS):
 
     message = response.choices[0].message
 
-    # 没有 tool call，说明模型认为已经可以给最终答案
     if not message.tool_calls:
         print("=== FINAL ANSWER ===")
         print(message.content)
         break
 
-    # 先把模型这一次的动作写进上下文
     messages.append(
         {
             "role": "assistant",
@@ -113,10 +125,10 @@ for step in range(MAX_STEPS):
             ],
         }
     )
+
     for tool_call in message.tool_calls:
         try:
             arguments = json.loads(tool_call.function.arguments)
-
             tool = tool_registry.get(tool_call.function.name)
 
             if tool is None:
@@ -148,7 +160,6 @@ for step in range(MAX_STEPS):
         print("=== TOOL RESULT ===")
         print(result)
 
-        # 把问题结果加入上下文
         messages.append(
             {
                 "role": "tool",
