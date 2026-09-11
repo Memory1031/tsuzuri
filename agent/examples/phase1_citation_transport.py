@@ -146,7 +146,6 @@ class CitationStreamParser:
         while self.buffer:
             marker_start = self.buffer.find(self.MARKER_PREFIX)
 
-            # 当前没有完整 marker 开头
             if marker_start == -1:
                 keep_length = self._partial_prefix_length(self.buffer)
 
@@ -173,7 +172,6 @@ class CitationStreamParser:
 
                 break
 
-            # marker 前面还有普通文本
             if marker_start > 0:
                 events.append(
                     {
@@ -186,7 +184,6 @@ class CitationStreamParser:
 
             marker_end = self.buffer.find("]]")
 
-            # citation token 尚未完整到达
             if marker_end == -1:
                 break
 
@@ -196,8 +193,6 @@ class CitationStreamParser:
             source = self.citation_registry.get(token)
 
             if source is None:
-                # 不是 Runtime 发出的合法 citation。
-                # 进入内部 trace，绝不能作为用户正文输出。
                 events.append(
                     {
                         "type": "citation_error",
@@ -206,8 +201,6 @@ class CitationStreamParser:
                 )
                 continue
 
-            # 公开编号按最终答案中第一次引用的顺序分配，
-            # 与 Evidence Store 里的保存顺序解耦。
             number = self.public_numbers.get(token)
 
             if number is None:
@@ -232,10 +225,6 @@ class CitationStreamParser:
         remaining = self.buffer
         self.buffer = ""
 
-        # 流结束时 buffer 里只可能剩两类东西：
-        # MARKER_PREFIX 的真前缀（如 "[[TSU"），
-        # 或以 MARKER_PREFIX 开头但没等到 "]]" 的残缺 token。
-        # 两者都像内部协议，都不能 fallback 成用户文本。
         looks_like_protocol = remaining.startswith(
             self.MARKER_PREFIX
         ) or self.MARKER_PREFIX.startswith(remaining)
@@ -285,7 +274,6 @@ def emit_citation_events(events: list[dict[str, Any]]) -> None:
             )
 
         elif event["type"] == "citation_error":
-            # 只进内部 trace，不进入用户正文。
             print(
                 f"\n[warning] invalid citation: {event['token']}",
                 file=sys.stderr,
@@ -307,31 +295,31 @@ client = OpenAI(
 
 
 SYSTEM_PROMPT = """
-    You are an ACGN research agent. 
-    For factual claims about works, releases, ratings, developers, and dates, 
-    use information returned by tools as the source of truth. 
-    Do not present information from your own background knowledge as verified fact. 
-    If the available tool results do not contain enough information, 
-    call another tool or explicitly state that the information is unverified. 
-    Prefer primary sources over secondary sources when they directly support a claim. 
-    Web search snippets may be used as evidence, but do not describe them as direct webpage verification. 
-    If a primary source directly supports the requested fact and there is no strong conflicting evidence, 
-    stop researching and answer. 
-    If sources conflict, investigate the strongest conflicting sources, then report the disagreement 
-    instead of searching indefinitely. 
-    Avoid repeating equivalent searches that are unlikely to provide new evidence.
-    When you discover information that materially supports the user's question,
-    save it with save_evidence before it may leave the working context.
-    Choose source_ref only from refs explicitly provided in previous tool results.
-    Do not invent source refs.
-    Save only important evidence, not every available source.
-    Before ending the research phase, make sure all facts that are necessary
-    to answer the user's question have been saved as evidence.
+You are an ACGN research agent.
+For factual claims about works, releases, ratings, developers, and dates,
+use information returned by tools as the source of truth.
+Do not present information from your own background knowledge as verified fact.
+If the available tool results do not contain enough information,
+call another tool or explicitly state that the information is unverified.
+Prefer primary sources over secondary sources when they directly support a claim.
+Web search snippets may be used as evidence, but do not describe them as direct webpage verification.
+If a primary source directly supports the requested fact and there is no strong conflicting evidence,
+stop researching and answer.
+If sources conflict, investigate the strongest conflicting sources, then report the disagreement
+instead of searching indefinitely.
+Avoid repeating equivalent searches that are unlikely to provide new evidence.
+When you discover information that materially supports the user's question,
+save it with save_evidence before it may leave the working context.
+Choose source_ref only from refs explicitly provided in previous tool results.
+Do not invent source refs.
+Save only important evidence, not every available source.
+Before ending the research phase, make sure all facts that are necessary
+to answer the user's question have been saved as evidence.
 
-    The final answer will be generated from saved evidence only.
-    Information that is not saved as evidence will not be available during
-    final synthesis.
-"""
+The final answer will be generated from saved evidence only.
+Information that is not saved as evidence will not be available during
+final synthesis.
+""".strip()
 
 FINAL_SYNTHESIS_PROMPT = """
 You are producing the final answer for an ACGN research task.
@@ -468,15 +456,10 @@ tools = [
                     },
                     "claim": {
                         "type": "string",
-                        "description": (
-                            "The factual claim supported by this source."
-                        ),
+                        "description": "The factual claim supported by this source.",
                     },
                 },
-                "required": [
-                    "source_ref",
-                    "claim",
-                ],
+                "required": ["source_ref", "claim"],
             },
         },
     },
@@ -622,9 +605,7 @@ print("\n=== EVIDENCE STORE (internal, hidden from the model) ===")
 for evidence in evidence_store:
     print(evidence.model_dump_json(indent=2))
 
-evidence_context, citation_registry = build_synthesis_context(
-    evidence_store
-)
+evidence_context, citation_registry = build_synthesis_context(evidence_store)
 
 final_messages = [
     {

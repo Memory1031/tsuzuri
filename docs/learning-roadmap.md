@@ -6,9 +6,33 @@ The roadmap is organized around one principle:
 
 > Add one new agent concept at a time, and make every new concept solve a real ACGN use case.
 
+## Current progress
+
+```text
+P0  Raw Agent Loop                 ✅ complete
+ ↓
+P1  Research + Evidence            ✅ complete
+ ↓
+P2  PydanticAI Comparison          ← current
+ ↓
+P3  Personal Context (Read)
+ ↓
+P4  MCP + Safe Actions
+ ↓
+P5  React + Vite UI
+ ↓
+P6  SQLite + Entity Resolution
+ ↓
+P7  RAG
+ ↓
+P8  Eval + Observability
+ ↓
+P9  Optional Electron Desktop
+```
+
 ---
 
-## Phase 0 — Understand the Agent Loop
+## Phase 0 — Understand the Agent Loop ✅
 
 ### Goal
 
@@ -49,11 +73,13 @@ web_search
 
 ### Exit criteria
 
-You can explain the full execution lifecycle without relying on LangGraph/ADK terminology.
+You can explain the full execution lifecycle without relying on framework terminology.
+
+**Status:** complete. See [`docs/learning/phase-0-agent-loop.md`](learning/phase-0-agent-loop.md).
 
 ---
 
-## Phase 1 — Build a Research Agent
+## Phase 1 — Build a Research Agent ✅
 
 ### Goal
 
@@ -71,86 +97,282 @@ Tsuzuri can research questions such as:
 ### New capabilities
 
 - multiple tool calls per run
+- real structured VNDB integration
 - web search + webpage reading
 - source provenance
+- runtime-owned source references
 - evidence collection
-- confidence/uncertainty handling
-- structured research result
+- research termination
+- uncertainty/conflict handling
+- evidence-only final synthesis
 
-### Suggested tools
+### Tools explored
 
 ```text
-search_bangumi
-get_bangumi_subject
 search_vndb
-get_vndb_releases
+get_vndb
 web_search
 read_webpage
+save_evidence
 ```
 
 ### What should be learned
 
 - tool routing
+- Search → Resolve → Get
 - iterative research
 - when structured APIs are better than web search
+- why search discovery and webpage reading are different operations
 - when the agent has enough evidence to stop
 - source quality and conflicting evidence
-- context growth and result compression
+- Agent State vs model Context
+- observations vs durable Evidence
+- context rebuilding from selected research memory
+- why the model should select runtime-owned refs instead of regenerating IDs/URLs/source text
 
 ### Exit criteria
 
-The agent produces answers that are observably better than a single LLM response because it gathered and cited evidence itself.
+The agent produces answers that are observably better than a single LLM response because it gathered evidence itself, and final synthesis can operate from selected Evidence rather than the complete raw research transcript.
+
+**Status:** complete. See [`docs/learning/phase-1-research-evidence.md`](learning/phase-1-research-evidence.md).
 
 ---
 
-## Phase 2 — Introduce a Framework Deliberately
+## Phase 2 — Introduce an Agent SDK Deliberately ← Current
 
 ### Goal
 
-Learn what an agent framework actually solves after understanding the raw loop.
+Learn what a real agent SDK removes after understanding the raw loop, and validate that the selected SDK can support Tsuzuri's future research **and** action workflows.
 
-### Candidate frameworks
+### Selected SDK
 
-Choose one, not several:
+**PydanticAI**
 
-- LangGraph
-- Google ADK
+See [`docs/learning/phase-2-framework-selection.md`](learning/phase-2-framework-selection.md) for the decision rationale.
 
-### Migration target
-
-Rebuild the Phase 1 workflow using the selected framework while preserving behavior.
-
-### What should be compared
+The choice is based on Tsuzuri's expected shape:
 
 ```text
-Raw implementation
-vs.
-Framework implementation
+local-first
+Python backend
+React frontend
+SQLite
+Bangumi / VNDB / Steam / Web
+MCP
+multiple model providers
+optional Electron shell
+```
+
+PydanticAI is preferred because it is Pythonic, type-driven, provider-neutral, and small enough that Tsuzuri's domain logic remains visible.
+
+### Why the alternatives are not the default
+
+- **LangGraph:** keep as a future orchestration layer if explicit graph/state-machine complexity, long-lived branching workflows, or checkpoint-heavy execution genuinely appears.
+- **Google ADK:** strong general framework, especially attractive when using Google's managed agent/cloud platform, but Tsuzuri currently has no planned GCP/Vertex dependency.
+- **OpenAI Agents SDK:** excellent minimal SDK and useful reference, but Tsuzuri intentionally wants a provider-neutral long-term core.
+
+### Phase 2 sequence
+
+```text
+P2.1  Raw P1 → PydanticAI
+      Rebuild the existing research agent without changing behavior first.
+
+P2.2  Evidence Pipeline
+      Compare model-driven save_evidence with a runtime-guaranteed
+      capture → candidate → semantic extraction pipeline.
+
+P2.3  Planning
+      Test explicit planning only on complex research tasks where
+      decomposition may actually improve quality.
+
+P2.4  Safe Action
+      Validate a mock write flow with approval → execute → verify.
+```
+
+The order matters: first reproduce existing behavior, then introduce one new SDK capability at a time.
+
+### P2.1 — Rebuild Phase 1 research
+
+Rebuild the existing workflow with PydanticAI while preserving behavior as much as practical:
+
+```text
+search_vndb
+get_vndb
+web_search
+read_webpage
 ```
 
 Compare:
 
-- state representation
-- tool registration
-- retries
-- checkpoints
-- interruptions
-- streaming
-- tracing
-- testability
-- code complexity
+```text
+Raw implementation
+vs.
+PydanticAI implementation
+```
+
+Focus on:
+
+- tool schema generation from Python types;
+- tool registration and dispatch;
+- execution lifecycle / Agent.run();
+- message history;
+- RunContext / dependencies;
+- provider configuration;
+- model switching;
+- errors and retries;
+- streaming primitives;
+- testability;
+- code complexity.
+
+Do **not** add Planning, automatic Evidence extraction, multi-agent research, AG-UI, or durable execution during this first migration.
+
+### P2.2 — Compare Evidence collection models
+
+Phase 1 intentionally uses a model-facing `save_evidence(source_ref, claim)` tool. That design made the Evidence boundary visible, but it also means important facts can be lost when the model forgets to save them.
+
+Compare two approaches:
+
+```text
+A. Model-driven Evidence
+
+Tool Result
+  ↓
+Research Agent decides it matters
+  ↓
+save_evidence(source_ref, claim)
+  ↓
+Evidence Store
+```
+
+and:
+
+```text
+B. Runtime-guaranteed Evidence Pipeline
+
+Tool Result
+  ↓
+Runtime always captures Raw Observation / Evidence Candidate
+  ↓
+semantic extractor / policy decides relevance and claim
+  ↓
+Evidence Store
+```
+
+The runtime should only guarantee the mechanical path. It can fill data it already knows—tool identity, URL, raw support, observation identity—but semantic decisions such as relevance and claim extraction still belong to an LLM or explicit Tsuzuri policy.
+
+Questions to answer:
+
+- Should `save_evidence` remain model-facing?
+- Which Evidence fields can the runtime fill mechanically?
+- Does automatic extraction improve recall enough to justify extra model calls/cost?
+- Should Raw Observation, Evidence Candidate, and selected Evidence remain separate layers?
+- Can SDK lifecycle hooks simplify the pipeline without hiding Evidence semantics?
+
+### P2.3 — Experiment with Planning only when useful
+
+Planning should not become mandatory ceremony for every question.
+
+Use a simple research question as the no-plan baseline:
+
+```text
+When did the original STEINS;GATE launch on Steam?
+```
+
+Then compare with a broader question where decomposition may help:
+
+```text
+Compare the original STEINS;GATE, ELITE, and RE:BOOT across release history,
+content differences, and available PC versions.
+```
+
+For a complex task, an explicit plan may track steps such as:
+
+```text
+1. resolve target works
+2. collect structured release data
+3. verify official store information
+4. investigate content differences
+5. resolve conflicting claims
+6. synthesize
+```
+
+The framework may provide plan storage, status updates, persistence, and events. Tsuzuri/the model still owns the semantic strategy: how to decompose the question, which sources to prioritize, what to investigate next, and when evidence is sufficient.
+
+The experiment should answer:
+
+- When does Planning actually improve research quality?
+- What extra token/state cost does it add?
+- Which plan mechanics can be delegated to the SDK?
+- Which planning policy remains Tsuzuri's responsibility?
+- Should Planning be opt-in based on task complexity rather than the default?
+
+### P2.4 — Validate future actions early
+
+Do not wait until the real Bangumi integration to discover whether the SDK fits write workflows.
+
+Add a fake write capability such as:
+
+```text
+set_mock_rating(work_ref, rating)
+```
+
+Exercise an approval-gated flow:
+
+```text
+resolve target
+  ↓
+read current state
+  ↓
+prepare write
+  ↓
+approval required
+  ↓
+approve / reject
+  ↓
+execute
+  ↓
+read state again
+  ↓
+verify
+```
+
+This remains an SDK validation exercise. Real account mutation stays in Phase 4.
 
 ### What should be learned
 
-The objective is not “learn LangGraph syntax”.
+The objective is not “learn PydanticAI syntax”.
 
 The objective is to answer:
 
-> Which problems does the framework remove, and which problems remain mine?
+> Which generic runtime problems does PydanticAI remove, and which Tsuzuri-specific problems remain ours?
+
+In particular, the SDK should not own Tsuzuri's:
+
+- Evidence semantics;
+- ACGN entity resolution;
+- source-quality policy;
+- research strategy;
+- provider adapters;
+- collection/action rules;
+- read/write safety policy;
+- product-specific approval UX.
+
+A useful rule for this phase is:
+
+> Let the SDK/runtime own generic mechanics; let Tsuzuri own domain meaning and policy.
 
 ### Exit criteria
 
-You can justify why the framework stays in the project or why the raw implementation remains preferable.
+You can explain:
+
+1. which raw-runtime code disappeared;
+2. which abstractions became clearer rather than merely shorter;
+3. whether Evidence should remain model-saved, become runtime-triggered, or use a hybrid design;
+4. when explicit Planning improves research enough to justify its complexity;
+5. whether research and an approval-gated mock action both feel natural;
+6. whether model-provider neutrality remains practical;
+7. which State/Evidence/Planning/domain concepts Tsuzuri still owns;
+8. why PydanticAI should remain—or why evidence justifies replacing it.
 
 ---
 
@@ -221,16 +443,17 @@ The same query produces meaningfully different results depending on the connecte
 
 ---
 
-## Phase 4 — MCP and Action Tools
+## Phase 4 — MCP and Safe Action Tools
 
 ### Goal
 
-Learn MCP and safe side effects through a real workflow.
+Learn MCP and real side effects through a controlled workflow.
 
 ### Strategy
 
 - reuse an existing Bangumi MCP implementation when practical
 - implement a small VNDB MCP server yourself for learning
+- reuse the approval/action pattern validated in Phase 2
 
 ### Example VNDB MCP tools
 
@@ -244,7 +467,7 @@ update_my_list
 
 ### Write capabilities
 
-Later allow actions such as:
+Allow actions such as:
 
 - mark a Bangumi work as watching/completed
 - update Bangumi progress
@@ -270,6 +493,8 @@ User approves
   ↓
 MCP/API write
   ↓
+Read state again / verify
+  ↓
 Result + audit entry
 ```
 
@@ -283,11 +508,12 @@ Result + audit entry
 - human-in-the-loop
 - idempotency
 - retries
+- verification after mutation
 - auditability
 
 ### Exit criteria
 
-Tsuzuri can safely modify one external account state through an explicit approval flow.
+Tsuzuri can safely modify one external account state through an explicit approval flow and verify the resulting external state.
 
 ---
 
@@ -306,6 +532,8 @@ Turn the working agent into an observable product without moving agent logic int
 ### Python service
 
 Expose the agent through a small local HTTP API and stream execution events via SSE.
+
+Use a custom event contract first. AG-UI or another standard agent-event protocol may be evaluated later, but it does not determine the visual UI and is not required for Phase 5.
 
 ### Initial UI areas
 
@@ -340,6 +568,7 @@ Show useful runtime state:
 - frontend/backend contract design
 - explicit run state
 - cancellation/error states
+- approval UX
 - displaying tool execution without exposing internal chain-of-thought
 
 ### Exit criteria
@@ -371,6 +600,7 @@ Preference
 AgentRun
 ToolCall
 Evidence
+ActionRecord
 ```
 
 ### Core domain challenge
@@ -395,6 +625,7 @@ Steam app-id
 - stale data
 - conflict resolution
 - entity resolution
+- persisted action/audit state
 
 ### Exit criteria
 
@@ -564,34 +795,6 @@ Desktop packaging solves a real usability need rather than serving as architectu
 
 ---
 
-# Summary progression
-
-```text
-P0  Raw Agent Loop
- ↓
-P1  Research + Evidence
- ↓
-P2  Agent Framework Comparison
- ↓
-P3  Personal Context (Read)
- ↓
-P4  MCP + Safe Actions
- ↓
-P5  React + Vite UI
- ↓
-P6  SQLite + Entity Resolution
- ↓
-P7  RAG
- ↓
-P8  Eval + Observability
- ↓
-P9  Optional Electron Desktop
-```
-
-Each phase should result in a usable capability, not merely a new dependency.
-
----
-
 # Deliberate exclusions during early learning
 
 Do not add these until a concrete problem demands them:
@@ -604,6 +807,8 @@ Do not add these until a concrete problem demands them:
 - a separate vector database
 - self-hosted LLM infrastructure
 - full-site crawling
+- durable workflow engines such as Temporal/DBOS/Prefect/Restate
+- LangGraph before workflow complexity justifies an explicit graph
 - automatic account writes without approval
 
 The purpose of Tsuzuri is to understand agent engineering deeply, not to maximize the number of technologies in the architecture diagram.
