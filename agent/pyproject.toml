@@ -3,8 +3,11 @@ name = "tsuzuri-agent"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "openai>=3.11.0",
+    "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",
+    "trafilatura>=2.2.0",
 ]
 
 [dependency-groups]
