@@ -147,6 +147,20 @@ The important point is architectural freedom: choosing PydanticAI does not preve
 
 Phase 2 should rebuild existing behavior before adding new product scope.
 
+The order is deliberate:
+
+```text
+P2.1  Rebuild the existing research agent
+ ↓
+P2.2  Compare explicit save_evidence with a runtime-guaranteed Evidence Pipeline
+ ↓
+P2.3  Experiment with Planning only for research tasks that actually benefit from it
+ ↓
+P2.4  Validate an approval-gated mock write action
+```
+
+The goal is to introduce one abstraction at a time and keep each experiment tied to a problem already observed in the raw runtime.
+
 ### P2.1 — Rebuild Phase 1 research
 
 Migrate:
@@ -170,7 +184,100 @@ Compare raw code with PydanticAI for:
 - errors and retries;
 - code size and testability.
 
-### P2.2 — Validate future action support early
+Keep the first migration behaviorally close to Phase 1. Do not introduce planning, automatic evidence extraction, multi-agent research, or UI transport at the same time.
+
+### P2.2 — Compare Evidence collection models
+
+Phase 1 deliberately made the research model call `save_evidence(...)` itself. This exposed the distinction between a Tool Result and durable Evidence, but it also created a failure mode: important information is lost if the model forgets to save it.
+
+Compare two designs:
+
+```text
+A. Model-driven Evidence
+
+Tool Result
+  ↓
+Research Agent decides it matters
+  ↓
+save_evidence(source_ref, claim)
+  ↓
+Evidence Store
+```
+
+and:
+
+```text
+B. Runtime-guaranteed Evidence Pipeline
+
+Tool Result
+  ↓
+Runtime always captures Raw Observation / Evidence Candidate
+  ↓
+semantic extractor / policy decides relevance and claim
+  ↓
+Evidence Store
+```
+
+The second design does **not** mean the runtime magically understands source semantics. The runtime should own mechanical facts it already knows—tool identity, URL, source text, observation identity, timestamps—while an LLM or explicit policy still performs semantic judgments such as relevance and claim extraction.
+
+This experiment should answer:
+
+- Should `save_evidence` remain a model-facing tool?
+- Which parts can be guaranteed mechanically after tool execution?
+- Does automatic extraction improve recall enough to justify extra model calls and cost?
+- Should raw observations, evidence candidates, and selected Evidence remain separate layers?
+- Which lifecycle hooks are useful without hiding Tsuzuri's Evidence semantics inside the SDK?
+
+Do not optimize for maximum automation. The objective is to find the smallest reliable Evidence boundary.
+
+### P2.3 — Experiment with Planning only when useful
+
+Do not make every research request create a plan.
+
+First test a simple question that should remain direct:
+
+```text
+When did the original STEINS;GATE launch on Steam?
+```
+
+Then test a broader question where explicit decomposition may help:
+
+```text
+Compare the original STEINS;GATE, ELITE, and RE:BOOT across release history,
+content differences, and available PC versions.
+```
+
+For complex research, a plan may look like:
+
+```text
+1. resolve the three target works
+2. collect structured release data
+3. verify official store information
+4. investigate content differences
+5. resolve conflicts
+6. synthesize the answer
+```
+
+The framework may provide plan storage, updates, events, and persistence, but Tsuzuri/the model still owns the semantic research strategy:
+
+```text
+Framework / Runtime owns
+- plan container
+- task status
+- persistence / restoration
+- update mechanics
+- events
+
+Research policy / model owns
+- how the question is decomposed
+- source priority
+- which task should run next
+- when evidence is sufficient
+```
+
+The experiment should answer whether explicit Planning improves complex research enough to justify the extra state and tokens. If not, keep the normal agent loop as the default.
+
+### P2.4 — Validate future action support early
 
 Do not wait until the real Bangumi write integration to discover whether the SDK fits actions.
 
@@ -185,6 +292,8 @@ Then test:
 ```text
 resolve target
  ↓
+read current state
+ ↓
 propose write
  ↓
 approval required
@@ -198,19 +307,24 @@ read state again
 verify
 ```
 
-This is a framework validation exercise, not the real P4 account integration.
+This is an SDK validation exercise, not the real P4 account integration.
 
-### P2.3 — Keep domain semantics outside the SDK
+### Keep domain semantics outside the SDK
 
 The SDK may own generic runtime concerns, but Tsuzuri should continue to own:
 
 - ACGN entity resolution;
 - source/evidence semantics;
 - source-quality policy;
+- research strategy;
 - collection/action policy;
 - read vs write safety rules;
 - product-specific confirmation UX;
 - external provider adapters.
+
+A useful rule for both Evidence and Planning is:
+
+> Let the SDK/runtime own generic mechanics; let Tsuzuri own domain meaning and policy.
 
 ## Exit criteria
 
@@ -218,9 +332,11 @@ Phase 2 is complete when we can answer:
 
 1. Which parts of the raw P0/P1 runtime disappeared after adopting PydanticAI?
 2. Which abstractions became clearer rather than merely shorter?
-3. Can the same SDK comfortably support research and an approval-gated mock action?
-4. Can Tsuzuri stay provider-neutral?
-5. Which state, Evidence, and domain concepts still belong to Tsuzuri rather than the framework?
-6. Is PydanticAI simple enough to keep as a long-term dependency?
+3. Should Evidence remain model-saved, become runtime-triggered, or use a hybrid approach?
+4. For which research questions does an explicit Plan improve quality enough to justify its complexity?
+5. Can the same SDK comfortably support research and an approval-gated mock action?
+6. Can Tsuzuri stay provider-neutral?
+7. Which state, Evidence, Planning, and domain concepts still belong to Tsuzuri rather than the SDK?
+8. Is PydanticAI simple enough to keep as a long-term dependency?
 
-If the answer to the last question is no, Phase 2 should produce evidence for changing framework rather than forcing the original choice.
+If the answer to the last question is no, Phase 2 should produce evidence for changing SDK rather than forcing the original choice.
