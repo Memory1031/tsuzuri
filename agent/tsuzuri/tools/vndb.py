@@ -51,6 +51,15 @@ class VndbVisualNovelDetail(BaseModel):
 
 
 def search_vndb(query: str, results: int = 5) -> VndbSearchResponse:
+    """Search VNDB for visual novels by title.
+
+    Use this to discover candidate visual novels before requesting
+    detailed information for a specific VNDB ID.
+
+    Args:
+        query: Title or name of the visual novel to search for.
+        results: Maximum number of search results to return.
+    """
     request = VndbSearchRequest(query=query, results=results)
 
     response = httpx.post(
@@ -63,7 +72,15 @@ def search_vndb(query: str, results: int = 5) -> VndbSearchResponse:
 
     return VndbSearchResponse.model_validate(response.json())
 
+
 def get_vndb(vn_id: str) -> VndbVisualNovelDetail | None:
+    """Get detailed information for one exact VNDB visual novel.
+
+    Use this after search_vndb has identified the target VNDB ID.
+
+    Args:
+        vn_id: Exact VNDB visual novel ID, for example "v17102".
+    """
     response = httpx.post(
         VNDB_API_URL,
         json={

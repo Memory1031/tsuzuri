@@ -6,6 +6,7 @@ dependencies = [
     "httpx>=0.28.1",
     "openai>=3.11.0",
     "pydantic>=2.13.5",
+    "pydantic-ai-slim[openai]>=2.42.0",
     "python-dotenv>=1.2.3",
     "trafilatura>=2.2.0",
 ]
