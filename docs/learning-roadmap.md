@@ -6,9 +6,33 @@ The roadmap is organized around one principle:
 
 > Add one new agent concept at a time, and make every new concept solve a real ACGN use case.
 
+## Current progress
+
+```text
+P0  Raw Agent Loop                 ✅ complete
+ ↓
+P1  Research + Evidence            ✅ complete
+ ↓
+P2  Google ADK Comparison          ← current
+ ↓
+P3  Personal Context (Read)
+ ↓
+P4  MCP + Safe Actions
+ ↓
+P5  React + Vite UI
+ ↓
+P6  SQLite + Entity Resolution
+ ↓
+P7  RAG
+ ↓
+P8  Eval + Observability
+ ↓
+P9  Optional Electron Desktop
+```
+
 ---
 
-## Phase 0 — Understand the Agent Loop
+## Phase 0 — Understand the Agent Loop ✅
 
 ### Goal
 
@@ -51,9 +75,11 @@ web_search
 
 You can explain the full execution lifecycle without relying on LangGraph/ADK terminology.
 
+**Status:** complete. See [`docs/learning/phase-0-agent-loop.md`](learning/phase-0-agent-loop.md).
+
 ---
 
-## Phase 1 — Build a Research Agent
+## Phase 1 — Build a Research Agent ✅
 
 ### Goal
 
@@ -71,86 +97,99 @@ Tsuzuri can research questions such as:
 ### New capabilities
 
 - multiple tool calls per run
+- real structured VNDB integration
 - web search + webpage reading
 - source provenance
+- runtime-owned source references
 - evidence collection
-- confidence/uncertainty handling
-- structured research result
+- research termination
+- uncertainty/conflict handling
+- evidence-only final synthesis
 
-### Suggested tools
+### Tools explored
 
 ```text
-search_bangumi
-get_bangumi_subject
 search_vndb
-get_vndb_releases
+get_vndb
 web_search
 read_webpage
+save_evidence
 ```
 
 ### What should be learned
 
 - tool routing
+- Search → Resolve → Get
 - iterative research
 - when structured APIs are better than web search
+- why search discovery and webpage reading are different operations
 - when the agent has enough evidence to stop
 - source quality and conflicting evidence
-- context growth and result compression
+- Agent State vs model Context
+- observations vs durable Evidence
+- context rebuilding from selected research memory
+- why the model should select runtime-owned refs instead of regenerating IDs/URLs/source text
 
 ### Exit criteria
 
-The agent produces answers that are observably better than a single LLM response because it gathered and cited evidence itself.
+The agent produces answers that are observably better than a single LLM response because it gathered evidence itself, and final synthesis can operate from selected Evidence rather than the complete raw research transcript.
+
+**Status:** complete. See [`docs/learning/phase-1-research-evidence.md`](learning/phase-1-research-evidence.md).
 
 ---
 
-## Phase 2 — Introduce a Framework Deliberately
+## Phase 2 — Introduce a Framework Deliberately ← Current
 
 ### Goal
 
 Learn what an agent framework actually solves after understanding the raw loop.
 
-### Candidate frameworks
+### Selected framework
 
-Choose one, not several:
+**Google ADK**
 
-- LangGraph
-- Google ADK
+The raw P0/P1 implementation has now exposed enough runtime concerns—state, tool execution, events, streaming, termination, and research memory—that a framework comparison is useful rather than premature.
 
 ### Migration target
 
-Rebuild the Phase 1 workflow using the selected framework while preserving behavior.
+Rebuild the Phase 1 workflow with Google ADK while preserving behavior as much as practical.
 
 ### What should be compared
 
 ```text
 Raw implementation
 vs.
-Framework implementation
+Google ADK implementation
 ```
 
 Compare:
 
 - state representation
+- Runner / execution lifecycle
+- Session / State / Event concepts
 - tool registration
-- retries
-- checkpoints
+- retries and error propagation
+- checkpoints / persistence boundaries
 - interruptions
 - streaming
+- callbacks
 - tracing
 - testability
 - code complexity
 
 ### What should be learned
 
-The objective is not “learn LangGraph syntax”.
+The objective is not “learn ADK syntax”.
 
 The objective is to answer:
 
-> Which problems does the framework remove, and which problems remain mine?
+> Which generic runtime problems does ADK remove, and which Tsuzuri-specific problems remain ours?
+
+In particular, Evidence semantics, ACGN entity resolution, source-quality policy, and future collection/action rules remain product/domain concerns even if runtime orchestration moves into a framework.
 
 ### Exit criteria
 
-You can justify why the framework stays in the project or why the raw implementation remains preferable.
+You can justify why ADK stays in the project, which raw-runtime code it replaces, and which abstractions Tsuzuri still needs to own.
 
 ---
 
@@ -270,6 +309,8 @@ User approves
   ↓
 MCP/API write
   ↓
+Read state again / verify
+  ↓
 Result + audit entry
 ```
 
@@ -283,6 +324,7 @@ Result + audit entry
 - human-in-the-loop
 - idempotency
 - retries
+- verification after mutation
 - auditability
 
 ### Exit criteria
@@ -561,34 +603,6 @@ Electron should not absorb agent business logic.
 ### Exit criteria
 
 Desktop packaging solves a real usability need rather than serving as architectural decoration.
-
----
-
-# Summary progression
-
-```text
-P0  Raw Agent Loop
- ↓
-P1  Research + Evidence
- ↓
-P2  Agent Framework Comparison
- ↓
-P3  Personal Context (Read)
- ↓
-P4  MCP + Safe Actions
- ↓
-P5  React + Vite UI
- ↓
-P6  SQLite + Entity Resolution
- ↓
-P7  RAG
- ↓
-P8  Eval + Observability
- ↓
-P9  Optional Electron Desktop
-```
-
-Each phase should result in a usable capability, not merely a new dependency.
 
 ---
 
