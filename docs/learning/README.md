@@ -16,9 +16,12 @@ Each phase should answer five questions:
 
 - [Phase 0 — Understanding the Agent Loop](phase-0-agent-loop.md) ✅
 - [Phase 1 — Research, Evidence, and Research Memory](phase-1-research-evidence.md) ✅
+- [Phase 2 — Framework Selection](phase-2-framework-selection.md) ← current
 
 ## Next
 
-Phase 2 will rebuild the Phase 1 workflow with **Google ADK** and compare the framework implementation against the raw runtime.
+Phase 2 will rebuild the Phase 1 workflow with **PydanticAI** and compare the SDK-based implementation against the raw runtime.
 
-The goal is not to learn framework syntax in isolation. The comparison should make clear which generic runtime responsibilities ADK removes and which Tsuzuri-specific responsibilities remain ours.
+The goal is not to learn framework syntax in isolation. The comparison should make clear which generic runtime responsibilities PydanticAI removes, which Tsuzuri-specific responsibilities remain ours, and whether the same SDK can comfortably support both research and an approval-gated mock write action.
+
+LangGraph remains a future orchestration option if explicit long-lived workflow/state-machine complexity appears. Google ADK remains useful to study separately for Google Cloud / Vertex-oriented agent systems rather than being the default Tsuzuri runtime.
