@@ -598,46 +598,50 @@ Known limitations include:
 - no write actions or approval flow;
 - no production citation transport/UI.
 
-These are useful limitations because they now create a concrete basis for evaluating an agent framework.
+These are useful limitations because they now create a concrete basis for evaluating an agent SDK.
 
 ---
 
-## 14. Why introduce a framework now?
+## 14. Why introduce an SDK now?
 
 Before Phase 0 and Phase 1, abstractions such as these were only framework vocabulary:
 
 ```text
-Runner
-Session
+Agent runner
+Message history
 State
-Event
 Tool
-Callback
 Streaming
-Checkpoint
+Approval / deferred action
+Retry / error handling
 ```
 
 After implementing the raw research agent, the problems behind those abstractions are visible.
 
-The next phase should therefore rebuild the same behavior with Google ADK and compare:
+Phase 2 will rebuild the same behavior with **PydanticAI** and compare:
 
 ```text
 Raw implementation
 vs.
-ADK implementation
+PydanticAI implementation
 ```
+
+PydanticAI was selected because Tsuzuri is expected to be a local-first, Pythonic, model-provider-neutral application rather than a Google Cloud-centered agent platform. LangGraph remains a future option if the workflow itself becomes complex enough to justify an explicit graph/state-machine layer.
 
 Questions for Phase 2 include:
 
-- What replaces the explicit message loop?
-- How does ADK represent session and state?
-- How are tools registered and tool results represented?
-- How are limits, callbacks, retries, and interruptions handled?
-- What does ADK provide for streaming and events?
+- What replaces the explicit message/tool loop?
+- How are Python function signatures turned into tool schemas?
+- How does `RunContext` / dependency injection compare with ad-hoc runtime globals?
+- How are message history and model/provider configuration represented?
+- What does the SDK provide for streaming, retries, and tool execution?
+- Can an approval-gated mock write action pause, approve/reject, execute, and verify cleanly?
 - Where should Tsuzuri-specific Evidence semantics live?
-- Which parts remain product/domain responsibility even after adopting a framework?
+- Which parts remain product/domain responsibility even after adopting an SDK?
 
 The purpose of Phase 2 is not to learn framework syntax. It is to identify which generic runtime responsibilities can now be delegated without losing understanding of how they work.
+
+See [`phase-2-framework-selection.md`](phase-2-framework-selection.md) for the framework decision.
 
 ---
 
@@ -655,6 +659,6 @@ Phase 1 is complete when these can be explained without relying on framework ter
 8. Why should Evidence preserve both `claim` and source `support`?
 9. Why should the model select a runtime-owned source ref instead of regenerating URLs, IDs, and source text?
 10. Why can Evidence Memory support final synthesis after raw research context is removed?
-11. Which parts of the current implementation are generic agent infrastructure that should now be compared with ADK?
+11. Which parts of the current implementation are generic agent infrastructure that should now be compared with PydanticAI?
 
 If these answers are clear, the raw implementation has done its job.
