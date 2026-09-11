@@ -30,6 +30,7 @@ The project will evolve from a minimal tool-calling research agent into a person
 - [Learning & Evolution Roadmap](docs/learning-roadmap.md)
 - [Learning Notes](docs/learning/README.md)
 - [Phase 0 — Understanding the Agent Loop](docs/learning/phase-0-agent-loop.md)
+- [Phase 1 — Research, Evidence, and Research Memory](docs/learning/phase-1-research-evidence.md)
 
 ## Current status
 
@@ -37,6 +38,15 @@ The project will evolve from a minimal tool-calling research agent into a person
 
 The raw implementation covers tool schemas, tool selection, tool dispatch, multiple tool calls, result propagation, recoverable error observations, bounded execution, and explicit message state without relying on an agent framework.
 
-The Phase 0 implementation is preserved as a learning reference at [`agent/examples/phase0_agent_loop.py`](agent/examples/phase0_agent_loop.py).
+The Phase 0 implementation is preserved at [`agent/examples/phase0_agent_loop.py`](agent/examples/phase0_agent_loop.py).
 
-The next milestone is **Phase 1 — Building a Research Agent**, beginning with replacing the mock VNDB tool with the real VNDB Kana API.
+**Phase 1 — Research + Evidence: complete.**
+
+The Phase 1 raw runtime adds real VNDB integration, web search and webpage reading, grounding policy, research termination, runtime-owned source references, evidence collection, and evidence-only final synthesis.
+
+Two references are preserved:
+
+- [`agent/examples/phase1_research_agent.py`](agent/examples/phase1_research_agent.py) — the intentionally smaller Phase 1 baseline.
+- [`agent/examples/phase1_citation_transport.py`](agent/examples/phase1_citation_transport.py) — the later streaming citation transport experiment, preserved as an exploration rather than the baseline.
+
+The next milestone is **Phase 2 — Agent Framework Comparison**. Tsuzuri will rebuild the Phase 1 workflow with **Google ADK** and compare its Runner/Session/State/Event/tool abstractions against the raw implementation.
