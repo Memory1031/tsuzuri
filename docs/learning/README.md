@@ -15,5 +15,10 @@ Each phase should answer five questions:
 ## Phases
 
 - [Phase 0 — Understanding the Agent Loop](phase-0-agent-loop.md) ✅
+- [Phase 1 — Research, Evidence, and Research Memory](phase-1-research-evidence.md) ✅
 
-Future notes will be added as the roadmap progresses.
+## Next
+
+Phase 2 will rebuild the Phase 1 workflow with **Google ADK** and compare the framework implementation against the raw runtime.
+
+The goal is not to learn framework syntax in isolation. The comparison should make clear which generic runtime responsibilities ADK removes and which Tsuzuri-specific responsibilities remain ours.
