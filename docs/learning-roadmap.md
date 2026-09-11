@@ -144,7 +144,7 @@ The agent produces answers that are observably better than a single LLM response
 
 Learn what a real agent SDK removes after understanding the raw loop, and validate that the selected SDK can support Tsuzuri's future research **and** action workflows.
 
-### Selected framework
+### Selected SDK
 
 **PydanticAI**
 
@@ -170,6 +170,26 @@ PydanticAI is preferred because it is Pythonic, type-driven, provider-neutral, a
 - **LangGraph:** keep as a future orchestration layer if explicit graph/state-machine complexity, long-lived branching workflows, or checkpoint-heavy execution genuinely appears.
 - **Google ADK:** strong general framework, especially attractive when using Google's managed agent/cloud platform, but Tsuzuri currently has no planned GCP/Vertex dependency.
 - **OpenAI Agents SDK:** excellent minimal SDK and useful reference, but Tsuzuri intentionally wants a provider-neutral long-term core.
+
+### Phase 2 sequence
+
+```text
+P2.1  Raw P1 → PydanticAI
+      Rebuild the existing research agent without changing behavior first.
+
+P2.2  Evidence Pipeline
+      Compare model-driven save_evidence with a runtime-guaranteed
+      capture → candidate → semantic extraction pipeline.
+
+P2.3  Planning
+      Test explicit planning only on complex research tasks where
+      decomposition may actually improve quality.
+
+P2.4  Safe Action
+      Validate a mock write flow with approval → execute → verify.
+```
+
+The order matters: first reproduce existing behavior, then introduce one new SDK capability at a time.
 
 ### P2.1 — Rebuild Phase 1 research
 
@@ -204,7 +224,89 @@ Focus on:
 - testability;
 - code complexity.
 
-### P2.2 — Validate future actions early
+Do **not** add Planning, automatic Evidence extraction, multi-agent research, AG-UI, or durable execution during this first migration.
+
+### P2.2 — Compare Evidence collection models
+
+Phase 1 intentionally uses a model-facing `save_evidence(source_ref, claim)` tool. That design made the Evidence boundary visible, but it also means important facts can be lost when the model forgets to save them.
+
+Compare two approaches:
+
+```text
+A. Model-driven Evidence
+
+Tool Result
+  ↓
+Research Agent decides it matters
+  ↓
+save_evidence(source_ref, claim)
+  ↓
+Evidence Store
+```
+
+and:
+
+```text
+B. Runtime-guaranteed Evidence Pipeline
+
+Tool Result
+  ↓
+Runtime always captures Raw Observation / Evidence Candidate
+  ↓
+semantic extractor / policy decides relevance and claim
+  ↓
+Evidence Store
+```
+
+The runtime should only guarantee the mechanical path. It can fill data it already knows—tool identity, URL, raw support, observation identity—but semantic decisions such as relevance and claim extraction still belong to an LLM or explicit Tsuzuri policy.
+
+Questions to answer:
+
+- Should `save_evidence` remain model-facing?
+- Which Evidence fields can the runtime fill mechanically?
+- Does automatic extraction improve recall enough to justify extra model calls/cost?
+- Should Raw Observation, Evidence Candidate, and selected Evidence remain separate layers?
+- Can SDK lifecycle hooks simplify the pipeline without hiding Evidence semantics?
+
+### P2.3 — Experiment with Planning only when useful
+
+Planning should not become mandatory ceremony for every question.
+
+Use a simple research question as the no-plan baseline:
+
+```text
+When did the original STEINS;GATE launch on Steam?
+```
+
+Then compare with a broader question where decomposition may help:
+
+```text
+Compare the original STEINS;GATE, ELITE, and RE:BOOT across release history,
+content differences, and available PC versions.
+```
+
+For a complex task, an explicit plan may track steps such as:
+
+```text
+1. resolve target works
+2. collect structured release data
+3. verify official store information
+4. investigate content differences
+5. resolve conflicting claims
+6. synthesize
+```
+
+The framework may provide plan storage, status updates, persistence, and events. Tsuzuri/the model still owns the semantic strategy: how to decompose the question, which sources to prioritize, what to investigate next, and when evidence is sufficient.
+
+The experiment should answer:
+
+- When does Planning actually improve research quality?
+- What extra token/state cost does it add?
+- Which plan mechanics can be delegated to the SDK?
+- Which planning policy remains Tsuzuri's responsibility?
+- Should Planning be opt-in based on task complexity rather than the default?
+
+### P2.4 — Validate future actions early
 
 Do not wait until the real Bangumi integration to discover whether the SDK fits write workflows.
 
@@ -234,7 +336,7 @@ read state again
 verify
 ```
 
-This remains a framework validation exercise. Real account mutation stays in Phase 4.
+This remains an SDK validation exercise. Real account mutation stays in Phase 4.
 
 ### What should be learned
 
@@ -244,15 +346,20 @@ The objective is to answer:
 
 > Which generic runtime problems does PydanticAI remove, and which Tsuzuri-specific problems remain ours?
 
-In particular, the framework should not own Tsuzuri's:
+In particular, the SDK should not own Tsuzuri's:
 
 - Evidence semantics;
 - ACGN entity resolution;
 - source-quality policy;
+- research strategy;
 - provider adapters;
 - collection/action rules;
 - read/write safety policy;
 - product-specific approval UX.
+
+A useful rule for this phase is:
+
+> Let the SDK/runtime own generic mechanics; let Tsuzuri own domain meaning and policy.
 
 ### Exit criteria
 
@@ -260,10 +367,12 @@ You can explain:
 
 1. which raw-runtime code disappeared;
 2. which abstractions became clearer rather than merely shorter;
-3. whether research and an approval-gated mock action both feel natural;
-4. whether model-provider neutrality remains practical;
-5. which State/Evidence/domain concepts Tsuzuri still owns;
-6. why PydanticAI should remain—or why evidence justifies replacing it.
+3. whether Evidence should remain model-saved, become runtime-triggered, or use a hybrid design;
+4. when explicit Planning improves research enough to justify its complexity;
+5. whether research and an approval-gated mock action both feel natural;
+6. whether model-provider neutrality remains practical;
+7. which State/Evidence/Planning/domain concepts Tsuzuri still owns;
+8. why PydanticAI should remain—or why evidence justifies replacing it.
 
 ---
 
