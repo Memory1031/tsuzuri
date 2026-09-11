@@ -17,7 +17,7 @@ The project will evolve from a minimal tool-calling research agent into a person
 ## Planned stack
 
 - **Frontend:** React + TypeScript + Vite
-- **Agent / Backend:** Python
+- **Agent / Backend:** Python + PydanticAI
 - **Communication:** HTTP + SSE when the UI is introduced
 - **External tools:** Bangumi, VNDB, Steam, Web Search, MCP
 - **Persistence:** introduced later; SQLite is preferred for local-first usage
@@ -31,6 +31,7 @@ The project will evolve from a minimal tool-calling research agent into a person
 - [Learning Notes](docs/learning/README.md)
 - [Phase 0 — Understanding the Agent Loop](docs/learning/phase-0-agent-loop.md)
 - [Phase 1 — Research, Evidence, and Research Memory](docs/learning/phase-1-research-evidence.md)
+- [Phase 2 — Framework Selection](docs/learning/phase-2-framework-selection.md)
 
 ## Current status
 
@@ -49,4 +50,6 @@ Two references are preserved:
 - [`agent/examples/phase1_research_agent.py`](agent/examples/phase1_research_agent.py) — the intentionally smaller Phase 1 baseline.
 - [`agent/examples/phase1_citation_transport.py`](agent/examples/phase1_citation_transport.py) — the later streaming citation transport experiment, preserved as an exploration rather than the baseline.
 
-The next milestone is **Phase 2 — Agent Framework Comparison**. Tsuzuri will rebuild the Phase 1 workflow with **Google ADK** and compare its Runner/Session/State/Event/tool abstractions against the raw implementation.
+The current milestone is **Phase 2 — Agent Framework Comparison**. Tsuzuri will rebuild the Phase 1 workflow with **PydanticAI**, then validate an approval-gated mock write action before real account mutations are introduced.
+
+The framework choice is deliberate: PydanticAI matches Tsuzuri's local-first, Pythonic, provider-neutral direction without requiring an explicit workflow graph or a cloud-platform-centered runtime. LangGraph remains a future option if workflow orchestration becomes genuinely complex; Google ADK remains useful to study separately for Google-oriented production systems.
