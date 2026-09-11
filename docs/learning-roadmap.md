@@ -13,7 +13,7 @@ P0  Raw Agent Loop                 ✅ complete
  ↓
 P1  Research + Evidence            ✅ complete
  ↓
-P2  Google ADK Comparison          ← current
+P2  PydanticAI Comparison          ← current
  ↓
 P3  Personal Context (Read)
  ↓
@@ -73,7 +73,7 @@ web_search
 
 ### Exit criteria
 
-You can explain the full execution lifecycle without relying on LangGraph/ADK terminology.
+You can explain the full execution lifecycle without relying on framework terminology.
 
 **Status:** complete. See [`docs/learning/phase-0-agent-loop.md`](learning/phase-0-agent-loop.md).
 
@@ -138,58 +138,132 @@ The agent produces answers that are observably better than a single LLM response
 
 ---
 
-## Phase 2 — Introduce a Framework Deliberately ← Current
+## Phase 2 — Introduce an Agent SDK Deliberately ← Current
 
 ### Goal
 
-Learn what an agent framework actually solves after understanding the raw loop.
+Learn what a real agent SDK removes after understanding the raw loop, and validate that the selected SDK can support Tsuzuri's future research **and** action workflows.
 
 ### Selected framework
 
-**Google ADK**
+**PydanticAI**
 
-The raw P0/P1 implementation has now exposed enough runtime concerns—state, tool execution, events, streaming, termination, and research memory—that a framework comparison is useful rather than premature.
+See [`docs/learning/phase-2-framework-selection.md`](learning/phase-2-framework-selection.md) for the decision rationale.
 
-### Migration target
-
-Rebuild the Phase 1 workflow with Google ADK while preserving behavior as much as practical.
-
-### What should be compared
+The choice is based on Tsuzuri's expected shape:
 
 ```text
-Raw implementation
-vs.
-Google ADK implementation
+local-first
+Python backend
+React frontend
+SQLite
+Bangumi / VNDB / Steam / Web
+MCP
+multiple model providers
+optional Electron shell
+```
+
+PydanticAI is preferred because it is Pythonic, type-driven, provider-neutral, and small enough that Tsuzuri's domain logic remains visible.
+
+### Why the alternatives are not the default
+
+- **LangGraph:** keep as a future orchestration layer if explicit graph/state-machine complexity, long-lived branching workflows, or checkpoint-heavy execution genuinely appears.
+- **Google ADK:** strong general framework, especially attractive when using Google's managed agent/cloud platform, but Tsuzuri currently has no planned GCP/Vertex dependency.
+- **OpenAI Agents SDK:** excellent minimal SDK and useful reference, but Tsuzuri intentionally wants a provider-neutral long-term core.
+
+### P2.1 — Rebuild Phase 1 research
+
+Rebuild the existing workflow with PydanticAI while preserving behavior as much as practical:
+
+```text
+search_vndb
+get_vndb
+web_search
+read_webpage
 ```
 
 Compare:
 
-- state representation
-- Runner / execution lifecycle
-- Session / State / Event concepts
-- tool registration
-- retries and error propagation
-- checkpoints / persistence boundaries
-- interruptions
-- streaming
-- callbacks
-- tracing
-- testability
-- code complexity
+```text
+Raw implementation
+vs.
+PydanticAI implementation
+```
+
+Focus on:
+
+- tool schema generation from Python types;
+- tool registration and dispatch;
+- execution lifecycle / Agent.run();
+- message history;
+- RunContext / dependencies;
+- provider configuration;
+- model switching;
+- errors and retries;
+- streaming primitives;
+- testability;
+- code complexity.
+
+### P2.2 — Validate future actions early
+
+Do not wait until the real Bangumi integration to discover whether the SDK fits write workflows.
+
+Add a fake write capability such as:
+
+```text
+set_mock_rating(work_ref, rating)
+```
+
+Exercise an approval-gated flow:
+
+```text
+resolve target
+  ↓
+read current state
+  ↓
+prepare write
+  ↓
+approval required
+  ↓
+approve / reject
+  ↓
+execute
+  ↓
+read state again
+  ↓
+verify
+```
+
+This remains a framework validation exercise. Real account mutation stays in Phase 4.
 
 ### What should be learned
 
-The objective is not “learn ADK syntax”.
+The objective is not “learn PydanticAI syntax”.
 
 The objective is to answer:
 
-> Which generic runtime problems does ADK remove, and which Tsuzuri-specific problems remain ours?
+> Which generic runtime problems does PydanticAI remove, and which Tsuzuri-specific problems remain ours?
 
-In particular, Evidence semantics, ACGN entity resolution, source-quality policy, and future collection/action rules remain product/domain concerns even if runtime orchestration moves into a framework.
+In particular, the framework should not own Tsuzuri's:
+
+- Evidence semantics;
+- ACGN entity resolution;
+- source-quality policy;
+- provider adapters;
+- collection/action rules;
+- read/write safety policy;
+- product-specific approval UX.
 
 ### Exit criteria
 
-You can justify why ADK stays in the project, which raw-runtime code it replaces, and which abstractions Tsuzuri still needs to own.
+You can explain:
+
+1. which raw-runtime code disappeared;
+2. which abstractions became clearer rather than merely shorter;
+3. whether research and an approval-gated mock action both feel natural;
+4. whether model-provider neutrality remains practical;
+5. which State/Evidence/domain concepts Tsuzuri still owns;
+6. why PydanticAI should remain—or why evidence justifies replacing it.
 
 ---
 
@@ -260,16 +334,17 @@ The same query produces meaningfully different results depending on the connecte
 
 ---
 
-## Phase 4 — MCP and Action Tools
+## Phase 4 — MCP and Safe Action Tools
 
 ### Goal
 
-Learn MCP and safe side effects through a real workflow.
+Learn MCP and real side effects through a controlled workflow.
 
 ### Strategy
 
 - reuse an existing Bangumi MCP implementation when practical
 - implement a small VNDB MCP server yourself for learning
+- reuse the approval/action pattern validated in Phase 2
 
 ### Example VNDB MCP tools
 
@@ -283,7 +358,7 @@ update_my_list
 
 ### Write capabilities
 
-Later allow actions such as:
+Allow actions such as:
 
 - mark a Bangumi work as watching/completed
 - update Bangumi progress
@@ -329,7 +404,7 @@ Result + audit entry
 
 ### Exit criteria
 
-Tsuzuri can safely modify one external account state through an explicit approval flow.
+Tsuzuri can safely modify one external account state through an explicit approval flow and verify the resulting external state.
 
 ---
 
@@ -348,6 +423,8 @@ Turn the working agent into an observable product without moving agent logic int
 ### Python service
 
 Expose the agent through a small local HTTP API and stream execution events via SSE.
+
+Use a custom event contract first. AG-UI or another standard agent-event protocol may be evaluated later, but it does not determine the visual UI and is not required for Phase 5.
 
 ### Initial UI areas
 
@@ -382,6 +459,7 @@ Show useful runtime state:
 - frontend/backend contract design
 - explicit run state
 - cancellation/error states
+- approval UX
 - displaying tool execution without exposing internal chain-of-thought
 
 ### Exit criteria
@@ -413,6 +491,7 @@ Preference
 AgentRun
 ToolCall
 Evidence
+ActionRecord
 ```
 
 ### Core domain challenge
@@ -437,6 +516,7 @@ Steam app-id
 - stale data
 - conflict resolution
 - entity resolution
+- persisted action/audit state
 
 ### Exit criteria
 
@@ -618,6 +698,8 @@ Do not add these until a concrete problem demands them:
 - a separate vector database
 - self-hosted LLM infrastructure
 - full-site crawling
+- durable workflow engines such as Temporal/DBOS/Prefect/Restate
+- LangGraph before workflow complexity justifies an explicit graph
 - automatic account writes without approval
 
 The purpose of Tsuzuri is to understand agent engineering deeply, not to maximize the number of technologies in the architecture diagram.
