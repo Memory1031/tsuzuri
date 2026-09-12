@@ -45,6 +45,12 @@ class WebPageResponse(BaseModel):
 
 
 def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
+    """Search the public web and return normalized search results.
+
+    Args:
+        query: Search query.
+        max_results: Maximum number of results to return.
+    """
     request = WebSearchRequest(
         query=query,
         max_results=max_results,
@@ -84,6 +90,17 @@ def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
 
 
 def read_webpage(url: str) -> WebPageResponse:
+    """Fetch a webpage and extract its readable main content.
+
+    Args:
+        url: URL of the webpage to read.
+
+    Raises:
+        httpx.HTTPStatusError:
+            If the HTTP request returns an unsuccessful status code.
+        RuntimeError:
+            If readable page content cannot be extracted.
+    """
     response = httpx.get(
         url,
         follow_redirects=True,
