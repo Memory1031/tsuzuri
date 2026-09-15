@@ -5,7 +5,11 @@ from pydantic import BaseModel, Field
 from trafilatura import extract
 
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
-MAX_WEBPAGE_CHARS = 15_000
+
+ANYSEARCH_SEARCH_URL = "https://api.anysearch.com/v1/search"
+
+
+MAX_WEBPAGE_CHARS = 6_000
 
 
 class TavilySearchResult(BaseModel):
@@ -20,6 +24,30 @@ class TavilySearchResponse(BaseModel):
     results: list[TavilySearchResult]
     response_time: float | None = None
     request_id: str | None = None
+
+
+class AnySearchResult(BaseModel):
+    title: str
+    url: str
+    snippet: str
+    content: str | None = None
+
+
+class AnySearchMetadata(BaseModel):
+    total_results: int
+    search_time_ms: int
+
+
+class AnySearchData(BaseModel):
+    results: list[AnySearchResult]
+    metadata: AnySearchMetadata
+
+
+class AnySearchResponse(BaseModel):
+    code: int
+    message: str
+    request_id: str
+    data: AnySearchData
 
 
 class WebSearchResult(BaseModel):
@@ -44,27 +72,19 @@ class WebPageResponse(BaseModel):
     content: str
 
 
-def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
-    """Search the public web and return normalized search results.
-
-    Args:
-        query: Search query.
-        max_results: Maximum number of results to return.
-    """
-    request = WebSearchRequest(
-        query=query,
-        max_results=max_results,
-    )
-
+def _search_tavily(
+    query: str,
+    max_results: int,
+) -> WebSearchResponse:
     response = httpx.post(
         TAVILY_SEARCH_URL,
         headers={
-            "Authorization": f"Bearer {os.getenv('WEB_SEARCH_API_KEY')}",
+            "Authorization": f"Bearer {os.environ['TAVILY_API_KEY']}",
         },
         json={
-            "query": request.query,
+            "query": query,
             "search_depth": "basic",
-            "max_results": request.max_results,
+            "max_results": max_results,
             "include_answer": False,
             "include_raw_content": False,
         },
@@ -87,6 +107,79 @@ def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
             for result in tavily_response.results
         ],
     )
+
+
+def _search_anysearch(
+    query: str,
+    max_results: int,
+) -> WebSearchResponse:
+    response = httpx.post(
+        ANYSEARCH_SEARCH_URL,
+        headers={
+            "Authorization": (f"Bearer {os.environ['ANYSEARCH_API_KEY']}"),
+        },
+        json={
+            "query": query,
+            "max_results": max_results,
+            "format": "json",
+        },
+        timeout=10,
+    )
+
+    response.raise_for_status()
+
+    anysearch_response = AnySearchResponse.model_validate(response.json())
+
+    if anysearch_response.code != 0:
+        raise RuntimeError(f"AnySearch failed: {anysearch_response.message}")
+
+    return WebSearchResponse(
+        query=query,
+        results=[
+            WebSearchResult(
+                title=result.title,
+                url=result.url,
+                snippet=result.snippet,
+                relevance_score=None,
+            )
+            for result in anysearch_response.data.results
+        ],
+    )
+
+
+def web_search(
+    query: str,
+    max_results: int = 5,
+) -> WebSearchResponse:
+    """Search the public web and return normalized search results.
+
+    Args:
+        query: Search query.
+        max_results: Maximum number of results to return.
+    """
+    request = WebSearchRequest(
+        query=query,
+        max_results=max_results,
+    )
+
+    provider = os.getenv(
+        "WEB_SEARCH_PROVIDER",
+        "tavily",
+    ).lower()
+
+    if provider == "tavily":
+        return _search_tavily(
+            request.query,
+            request.max_results,
+        )
+
+    if provider == "anysearch":
+        return _search_anysearch(
+            request.query,
+            request.max_results,
+        )
+
+    raise ValueError(f"Unsupported web search provider: {provider}")
 
 
 def read_webpage(url: str) -> WebPageResponse:

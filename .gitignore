@@ -9,5 +9,9 @@ __pycache__/
 .venv/
 venv/
 
+# Run artifacts
+agent/research_live.log
+agent/research_run.md
+
 # OS
 .DS_Store
