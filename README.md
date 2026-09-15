@@ -32,6 +32,7 @@ The project will evolve from a minimal tool-calling research agent into a person
 - [Phase 0 — Understanding the Agent Loop](docs/learning/phase-0-agent-loop.md)
 - [Phase 1 — Research, Evidence, and Research Memory](docs/learning/phase-1-research-evidence.md)
 - [Phase 2 — Framework Selection](docs/learning/phase-2-framework-selection.md)
+- [Phase 2.2 — Runtime-Guaranteed Evidence Pipeline](docs/learning/phase-2-2-evidence-pipeline.md)
 
 ## Current status
 
@@ -50,6 +51,18 @@ Two references are preserved:
 - [`agent/examples/phase1_research_agent.py`](agent/examples/phase1_research_agent.py) — the intentionally smaller Phase 1 baseline.
 - [`agent/examples/phase1_citation_transport.py`](agent/examples/phase1_citation_transport.py) — the later streaming citation transport experiment, preserved as an exploration rather than the baseline.
 
-The current milestone is **Phase 2 — Agent Framework Comparison**. Tsuzuri will rebuild the Phase 1 workflow with **PydanticAI**, then validate an approval-gated mock write action before real account mutations are introduced.
+**Phase 2.1 — Raw P1 → PydanticAI: complete.**
 
-The framework choice is deliberate: PydanticAI matches Tsuzuri's local-first, Pythonic, provider-neutral direction without requiring an explicit workflow graph or a cloud-platform-centered runtime. LangGraph remains a future option if workflow orchestration becomes genuinely complex; Google ADK remains useful to study separately for Google-oriented production systems.
+The Phase 1 research toolset now runs on PydanticAI, delegating generic tool schema/dispatch, typed output, provider integration, RunContext injection, and usage-limit mechanics to the SDK while keeping Tsuzuri-specific research semantics explicit.
+
+**Phase 2.2 — Evidence Pipeline: complete.**
+
+P2.2 replaced model-dependent `save_evidence` as the preferred research baseline with runtime-guaranteed Observation/Source capture followed by semantic, source-isolated Evidence extraction. The experiment also explored Evidence consolidation, conflict/sufficiency analysis, bounded research rounds, transport budgets, concurrent extraction, graceful degradation, evidence-only final synthesis, and FAST / GROUNDED / DEEP research modes.
+
+The complete learning summary is in [`docs/learning/phase-2-2-evidence-pipeline.md`](docs/learning/phase-2-2-evidence-pipeline.md).
+
+The P2.2 implementation intentionally expanded into a large laboratory pipeline. That code is evidence about the problem space, not the target long-term architecture. Before adding more orchestration, the discovered contracts should be compressed into a smaller readable research baseline.
+
+The current milestone is **P2.3 — Planning**: test explicit planning only on research tasks complex enough that decomposition may improve quality. Planning should remain opt-in rather than becoming mandatory ceremony for every question.
+
+PydanticAI remains the primary SDK. LangGraph remains a future option if, after compression, Tsuzuri's real workflow is still clearer as an explicit graph/state machine rather than ordinary Python orchestration.
