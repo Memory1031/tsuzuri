@@ -16,12 +16,17 @@ Each phase should answer five questions:
 
 - [Phase 0 — Understanding the Agent Loop](phase-0-agent-loop.md) ✅
 - [Phase 1 — Research, Evidence, and Research Memory](phase-1-research-evidence.md) ✅
-- [Phase 2 — Framework Selection](phase-2-framework-selection.md) ← current
+- [Phase 2 — Framework Selection](phase-2-framework-selection.md)
+- [Phase 2.2 — Runtime-Guaranteed Evidence Pipeline](phase-2-2-evidence-pipeline.md) ✅
 
-## Next
+## Current
 
-Phase 2 will rebuild the Phase 1 workflow with **PydanticAI** and compare the SDK-based implementation against the raw runtime.
+**P2.3 — Planning** is next.
 
-The goal is not to learn framework syntax in isolation. The comparison should make clear which generic runtime responsibilities PydanticAI removes, which Tsuzuri-specific responsibilities remain ours, and whether the same SDK can comfortably support both research and an approval-gated mock write action.
+P2.2 validated runtime-guaranteed source capture, source-specific Evidence extraction, provenance, conflict/sufficiency analysis, bounded research rounds, graceful degradation, evidence-only synthesis, and the FAST / GROUNDED / DEEP capability ladder.
 
-LangGraph remains a future orchestration option if explicit long-lived workflow/state-machine complexity appears. Google ADK remains useful to study separately for Google Cloud / Vertex-oriented agent systems rather than being the default Tsuzuri runtime.
+The main lesson is not that every research request should run the complete DEEP pipeline. The P2.2 implementation intentionally expanded until the orchestration itself became difficult to read. Before adding Planning, the discovered semantic contracts should be compressed into a smaller research baseline.
+
+Planning will then be tested only on research tasks complex enough that explicit decomposition may improve quality. It should remain optional rather than becoming mandatory ceremony for every question.
+
+PydanticAI remains Tsuzuri's primary SDK. LangGraph remains a future orchestration option only if the compressed real application flow still becomes easier to understand as an explicit graph/state machine.
